@@ -7,22 +7,9 @@ app = Flask(__name__)
 r = redis.Redis()
 
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def home():
     return render_template("maps.html")
-
-
-@app.route("/add-marker", methods=["POST"])
-def add_marker():
-    req = request.form
-    location = req["lname"]
-    latitude = req["latitude"]
-    longitude = req["longitude"]
-
-    r.geoadd("points", longitude, latitude, location)
-    r.set("last_loc_name", location)
-
-    return redirect("/")
 
 
 @app.route("/data")
@@ -31,9 +18,10 @@ def data():
     if loc_name is None:
         r.geoadd("points", "-104.985784", "39.728206", "parking")
         loc_name = "parking"
+        r.set('last_loc_name', loc_name)
 
     all_loc = r.georadiusbymember(name="points", member=loc_name, radius=6371, unit="km", withcoord=True)
-    print(all_loc)
+    # print(all_loc)
 
     coordinates = dict()
     for loc in all_loc:
@@ -48,6 +36,19 @@ def data():
 @app.route("/last")
 def last_location():
     return r.get("last_loc_name").decode('UTF-8')
+
+
+@app.route("/add-marker", methods=["POST"])
+def add_marker():
+    req = request.form
+    location = req["lname"]
+    latitude = req["latitude"]
+    longitude = req["longitude"]
+
+    r.geoadd("points", longitude, latitude, location)
+    r.set("last_loc_name", location)
+
+    return redirect("/")
 
 
 if __name__ == '__main__':
